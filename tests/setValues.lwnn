@@ -1,0 +1,13 @@
+class SetValues {
+  fields s: string, i: int, b: bool;
+
+  def SetValues() = {
+    self.s := { "Hello", "World!" };
+    self.i := { 1, 2, 3, 4 };
+    self.b := { true, false };
+
+    print self.s;
+    print self.i;
+    print self.b;
+  }
+}

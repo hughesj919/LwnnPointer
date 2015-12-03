@@ -1,0 +1,45 @@
+class Main {
+  def Main(a:A, b:B, c:C, a2:A, c2:C, c3: C) = {
+    a := new A();
+    b := new B();
+    c := new C();
+    c2 := new C();
+
+    a.a_b := b;
+    a2 := a;
+    a.a_c := c;
+    ##b.b_a := a2;##
+    b.b_c := c2;
+    c := b.b_c;
+    c3 := a.foo();
+  }
+}
+
+class A {
+  fields a_b : B, a_c: C;
+
+  def A() = {
+
+  }
+
+  def foo(fooc: C) : C = {
+    fooc := new C();
+    return fooc;
+  }
+}
+
+
+class B {
+    fields b_a : A, b_c: C;
+    def B() = {
+
+    }
+}
+
+class C {
+
+    def C() = {
+
+    }
+
+}

@@ -1,0 +1,17 @@
+class Main {
+  def Main(a:A) = {
+    a := new A();
+    a.recurse( 5 );
+  }
+}
+
+class A {
+  def recurse(x: int) = {
+    print x;    
+    if( 0 < x )
+    {
+      x := x - 1;    
+      self.recurse( x );
+    };
+  }
+}

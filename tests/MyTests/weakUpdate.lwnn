@@ -1,0 +1,20 @@
+## ran this, pulled from Piazza ##
+
+class Main {
+  def Main(a:A, b:A) = {
+    a := new A(1);
+    b := new A(0-2);
+    print a.n;
+    print b.n;
+  }
+}
+
+class A {
+  fields n : int;
+  def A(x:int) = {
+    self.n := x;
+  }
+  def set(x: int) = {
+    self.n := x;
+  }
+}

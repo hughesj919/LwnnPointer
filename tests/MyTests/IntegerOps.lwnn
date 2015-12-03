@@ -1,0 +1,26 @@
+class Main{
+    def Main(a: int, b: int) = {
+        a := {1, 2, 3};
+        b := {4, 5, 6};
+
+        print a;
+        print b;
+        print a + b;
+        print a / b;
+        print a * b;
+        print a - b;
+        print b + b;
+        print b / b;
+        print b * b;
+        print b - b;
+        print a + a;
+        print a / a;
+        print a * a;
+        print a - a;
+        print b + a;
+        print b / a;
+        print b * a;
+        print b - a;
+
+    }
+}

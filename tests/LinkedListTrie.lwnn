@@ -1,0 +1,138 @@
+class TrieFun {
+  def apply(x: TrieNode): TrieNode = { return x; }
+}
+
+class TrieNode {
+  fields ch: string, freq: int, left: TrieNode, right: TrieNode;
+  
+  def TrieNode(c: string, f: int, l: TrieNode, r: TrieNode) = {
+    self.ch := c;
+    self.freq := f;
+    self.left := l;
+    self.right := r;
+  }
+
+  def isLeaf(): bool = {
+    return (self.left = null) & (self.right = null);
+  }
+  
+  def lessThan(that: TrieNode, res: int): bool = {
+    res := self.compareTo(that);
+    return (0 < res);
+  }
+
+  def compareTo(that: TrieNode): int = {
+    return self.freq - that.freq;
+  }
+}
+
+class LinkedListTrieNode {
+  fields data: TrieNode, next: LinkedListTrieNode;
+
+  def LinkedListTrieNode(data: TrieNode, next: LinkedListTrieNode) = {
+    self.data := data;
+    self.next := next;
+  }
+}
+
+class LinkedListTrie {
+  fields head: LinkedListTrieNode;
+
+  def LinkedListTrie(size: int, cursor: LinkedListTrieNode, tmp: LinkedListTrieNode) = {
+    while (0 < size) {
+        if (cursor = null) {
+          cursor := new LinkedListTrieNode(null, null);
+          self.head := cursor;
+        } else {
+          tmp := new LinkedListTrieNode(null, null);
+          cursor.next := tmp;
+          cursor := cursor.next;
+        };
+        size := size - 1;
+    };
+  }
+
+  def length(count: int, cursor: LinkedListTrieNode): int = {
+    cursor := self.head;
+    while (cursor != null) {
+      count := count + 1;
+      cursor := cursor.next;
+    };
+    return count;
+  }
+
+  def get(i: int, cursor: LinkedListTrieNode): TrieNode = {
+    cursor := self.head;
+    while (0 < i) {
+        i := i - 1;
+        cursor := cursor.next;
+    };
+    return cursor.data;
+  }
+
+  def update(i: int, x: TrieNode, cursor: LinkedListTrieNode) = {
+    cursor := self.head;
+    while (0 < i) {
+        i := i - 1;
+        cursor := cursor.next;
+    };
+    cursor.data := x;
+  }
+
+  def cons(data: TrieNode, cursor: LinkedListTrieNode) = {
+    cursor := new LinkedListTrieNode(data, self.head);
+    self.head := cursor;
+  }
+
+  def append(data: TrieNode , cursor: LinkedListTrieNode, tmp: LinkedListTrieNode) = {
+    cursor := self.head;
+    while(cursor.next != null) {
+      cursor := cursor.next;
+    };
+    tmp := new LinkedListTrieNode(null, null);
+    cursor.next := tmp;
+  }
+
+  def delete(slot: int, temp: LinkedListTrieNode, count : int, ret: TrieNode): TrieNode = {
+    count := 0;
+    temp := self.head;
+    while (count != slot) {
+      count := count + 1;
+      temp := temp.next;
+    };
+    ret := temp.next.data;
+    temp.next := temp.next.next;
+    return ret;
+  }
+
+  def sort(len: int, i: int, elem: TrieNode, hole: int, tmp: TrieNode, cmp: bool, cmp2: bool) = {
+    len := self.length();
+    i := 1;
+    while (i < len) {
+        elem := self.get(i);
+        hole := i;
+        tmp := self.get(hole - 1);
+        cmp := elem.lessThan(tmp);        
+        while ((0 < hole) & cmp) {
+            tmp := self.get(hole - 1);
+            self.update(hole, tmp);
+            hole := hole - 1;
+        };
+        self.update(hole, elem);
+        i := i + 1;
+    };
+  }
+
+  def map(fun: TrieFun, len: int, cursor: LinkedListTrieNode, value: TrieNode) = {
+    len := self.length();
+    print len;
+    cursor := self.head;
+    while (0 < len) {
+      value := fun.apply(cursor.data);
+      cursor.data := (value);
+      cursor := cursor.next;
+      len := len - 1;
+    };
+  }
+}
+
