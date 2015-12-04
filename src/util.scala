@@ -137,7 +137,7 @@ object Parse extends StandardTokenParsers with PackratParsers {
         val (flds, methods) =
           if ( body._2.exists( _.mn == name ) ) body
           else (body._1,
-                body._2 + Method(name, Seq(), ClassT(name), Seq(), Var("self")))
+                body._2 + Method(name, Seq(Decl(Var("self"), ClassT(name))), ClassT(name), Seq(), Var("self")))
 
         Class(name, superClass, flds, methods)
     }
@@ -168,10 +168,12 @@ object Parse extends StandardTokenParsers with PackratParsers {
     case _ ~ mname ~ params ~ retType ~ _ ~ ((body, ret)) ⇒
       val method = retType match {
         case None ⇒
-          Method(mname, params ++ syntheticSet.toList, currentClass, body, ret)
+          if (params contains ((d:Decl) ⇒ d.x.name == "self"))
+            sys.error("self parameter should be implicit in concrete syntax")
+          Method(mname, Decl(Var("self"), currentClass) +: (params ++ syntheticSet.toList), currentClass, body, ret)
 
         case Some(tpe) ⇒
-          Method(mname, params ++ syntheticSet.toList, tpe, body, ret)
+          Method(mname, Decl(Var("self"), currentClass) +: (params ++ syntheticSet.toList), tpe, body, ret)
       }
       syntheticSet = Set()
       method
@@ -602,14 +604,10 @@ object Typechecker {
 
       case m @ Method(methodName, args, retT, body, rete) ⇒
         /* check that arguments exist, and expand scope with method */
-        val paramsT = for (d @ Decl(x, t) ← args) yield {
-          if (x.name == "self") throw Illtyped(s"Illegal parameter name self in:\n${pp(m)}")
-          x.name → check(d)
-        }
-
+        val paramsT = for (d @ Decl(x, t) ← args) yield { x.name → check(d) }
         val methodScope = inScope(ρ ++ paramsT.toList)
 
-        /* check that each stmt in correct */
+        /* check that each stmt is correct */
         for (stmt ← body) { methodScope.check(stmt) }
 
         val rtype = methodScope.check(rete)
@@ -639,7 +637,7 @@ object Typechecker {
       case c @ Call(x, e, mn, args) ⇒
         val fieldT = check(x)
         val method = classTable.method(check(e), Var(mn))
-        for ((d, a) ← method.argTs.zip(args)) {
+        for ((d, a) ← method.argTs.tail.zip(args)) {
           if (!(check(a) ⊑ d))
             throw Illtyped(s"$a is not subtype $d")
         }
@@ -653,7 +651,7 @@ object Typechecker {
         val classT = ClassT(cn)
         val declTypes = classTable.constructor(classT).argTs
 
-        for ((d, a) ← declTypes.zip(args)) {
+        for ((d, a) ← declTypes.tail.zip(args)) {
           if (!(check(a) ⊑ d))
             throw Illtyped(s"Argument type ${pt(check(a))} does not match declared type ${pt(d)}")
         }

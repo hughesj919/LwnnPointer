@@ -1,0 +1,50 @@
+// greg_test1.lwnn
+
+class MyFirstLwnnClass {
+
+	def FirstClassMethod(ptr1:SecondClass, ptr2:SecondClass, ptr3:SecondClass, ptr3:SecondClass, ptr4:SecondClass, ptr5:SecondClass) = {
+
+		ptr1 := new SecondClass();		// ptr1 points to this node id
+		ptr2 := new SecondClass();		// ptr2 points to this node id
+		ptr3 := new SecondClass();		// ptr3 points to this node id
+
+		// ptr1 should be a subset of all three of these
+		ptr2 := ptr1;	// ptr1.subsetOf { ptr2 }; 					ptr2 inherits ptr1's points-to set
+		ptr3 := ptr1;	// ptr1.subsetOf { ptr2, ptr3 }; 			ptr2 and ptr3 inherit ptr and ptr3's points-to sets
+		ptr4 := ptr1;	// ptr1.subsetOf { ptr2, ptr3, ptr4 }		ultimately ptr4 should contain ptrs 2, 3, and 4's points-to sets
+
+		// ptr5 is a superset of all of these; each of these has ptr5 once in its subsetOf set
+//		ptr5 := ptr1;	// ptr1.subsetOf { ptr5 }
+//		ptr5 := ptr2;	// ptr2.subsetOf { ptr5 }
+//		ptr5 := ptr3;	// ptr3.subsetOf { ptr5 }
+
+		ptr3 := new SecondClass(); 		// ptr3 should have two IDs in its points-to set
+
+
+
+	}
+}
+
+class SecondClass {
+
+	// fields field1:ThirdClass, field2:ThirdClass, field3:ThirdClass;
+
+}
+
+/*
+
+output looks like this before and after solveGraph()
+
+FirstClassMethod_ptr1 → 15
+FirstClassMethod_ptr2 → 17
+FirstClassMethod_ptr3 → 19, 30
+FirstClassMethod_ptr4 →
+FirstClassMethod_ptr5 →
+***** after solvegraph() *******
+FirstClassMethod_ptr1 → 15
+FirstClassMethod_ptr2 → 15, 17
+FirstClassMethod_ptr3 → 15, 19, 30
+FirstClassMethod_ptr4 → 15
+FirstClassMethod_ptr5 →
+
+*/

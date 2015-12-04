@@ -1,0 +1,17 @@
+class Main {
+  def Main(data: int, c: ClassOne, h: ClassOne) = {
+    data := 5;
+    c := null;	
+    h := new ClassOne(data, c);
+  }
+}
+
+
+class ClassOne {
+  fields data: int, next: ClassOne;
+
+  def ClassOne(data: int, next: ClassOne) = {
+    self.data := data;
+    self.next := next;
+  }
+}

@@ -48,7 +48,7 @@ object Andersen {
               soln(name) = (ptsto, subsetof)
           }
           soln.toSeq.sortBy(_._1).foreach {
-            case (name, (ptsto, subsetof)) ⇒ println(name + " → " + ptsto); if (!subsetof.isEmpty) {println("subset of: " + subsetof)}
+            case (name, (ptsto, subsetof)) ⇒ println(name + " → " + ptsto); if (!subsetof.isEmpty) {/*println("subset of: " + subsetof)*/}
 
           }
         }
@@ -63,13 +63,16 @@ object Andersen {
   }
   //returns none if the method is determinate, otherwise it returns the class that makes it non-determinate
   def isDeterminate(cname:ClassName, allClasses: Map[ClassName, Class], methName: MethodName): Option[Class] ={
-    allClasses.values.find((c:Class) =>  c.methods.exists((m:Method) => m.mn == methName) && {
+    allClasses.values.find((c:Class) =>  c.methods.exists((m:Method) => m.mn == methName && c.cn != cname)
+      && {
       var superClasses: Set[ClassName] = Set()
       var currClass: ClassName = c.cn
-      while (!allClasses(currClass).supercn.isEmpty){
+      var topClass: Boolean = false
+      while (!topClass && !allClasses(currClass).supercn.isEmpty){
         val superClass = allClasses(currClass).supercn
         superClasses += superClass
         currClass = superClass
+        if(currClass == "TopClass"){topClass = true}
       }
       superClasses.contains(cname)
     })
@@ -110,9 +113,9 @@ object Andersen {
   //      x := new Foo(y, z, null) //new
   //      x := y.foo(null, z) //method call
   //      x := null //assign case null
-  //    return x
-  //    return x.y
-  //    return null
+  //    return x //method
+  //    return x.y // method
+  //    return null //method
   //
   // in particular, there is at most one field access in any statement
   // and no call arguments contain field accesses (the null call
@@ -155,7 +158,6 @@ object Andersen {
     //var objNodes: MMap[(Var, ClassName), ObjNode]= MMap()
     val allClasses: Map[ClassName, Class] = ast.classes.map(f => (f.cn, f)).toMap
 
-
     ast.classes.map{
       cls => cls.methods.map {
         meth => meth.body.map{
@@ -181,6 +183,8 @@ object Andersen {
                 case Nulls() =>
                   val newTopNode = Graph.getNode(meth, x)
                   newTopNode.ptsto += Null
+
+                case _ => ;
               }
 
             // New objects
@@ -191,8 +195,9 @@ object Andersen {
                 case ClassT(fld_cn) =>
                   val childNode:ObjNode = Graph.allocNode(fld_cn, stmt.id)
                   childNode.ptsto += Null
-                  fld.x -> childNode
-              }).toMap )
+                  (fld.x,  childNode)
+                case _ =>
+              }).collect{case (v: Var, o: ObjNode) => v -> o}.toMap)
               val topNode = Graph.getNode(meth, x)
               topNode.ptsto += parentNode
             }
@@ -244,37 +249,77 @@ object Andersen {
             }*/
 
             case c @ Call(x, e, mn, args) => e match {
-              case v@Var(name) => val ptsto = Graph.getNode(meth, v).ptsto
+              case v@Var(name) => val ptsto = Graph.getNode(meth, v).ptsto;
                 ptsto.map{
-                  objNode => objNode match {
+                  objNode =>
+                    objNode match {
                     case ObjNode(child_ptsto, child_subsetof, cn, id, fields) => {
                       val cls: Class = allClasses(cn)
                       cls.methods.find(( m:Method ) => m.mn == mn ) match {
                         case Some(match_meth) => match_meth.τret match {
-                          case c_2@ClassT(classname_2) => isDeterminate(classname_2, allClasses, match_meth.mn) match {
+                          case c_2@ClassT(classname_2) => isDeterminate(cn, allClasses, match_meth.mn) match {
+
                             //method is indeterminant
+                            //TODO: handle indeterminant calls
                             case Some(c) =>
+
                             //method is determinant
                             case None =>
-                              match_meth.pa
-                              args.foreach( a =>  a match {
-                                case v @ Var(name) =>
-                                case Null =>
-                              })
+
+                              //update self node
+                              val selfNode: TopNode = Graph.getNode(match_meth, match_meth.params(0).x)
+                              selfNode.ptsto +=  objNode
+
+                              //update subsetof nodes for args and params
+                              args.zipWithIndex.foreach( a => a._1 match {
+                                  case v@Var(name) =>
+                                    val argTopNode: TopNode = Graph.getNode(meth, v)
+                                    //add 1 to account for self
+                                    if(a._2 +1 < args.length) {
+                                      val paramTopNode: TopNode = Graph.getNode(match_meth, match_meth.params(a._2 + 1).x)
+                                      argTopNode.subsetof += paramTopNode
+                                    }else{
+                                      //account for more params than args
+                                      val paramTopNode: TopNode = Graph.getNode(match_meth, match_meth.params(a._2 + 1).x)
+                                      paramTopNode.ptsto += Null
+                                    }
+
+                                  case Nulls() =>
+                                    val paramTopNode: TopNode = Graph.getNode(match_meth, match_meth.params(a._2 + 1).x)
+                                    paramTopNode.ptsto += Null
+                                  case _ => ;
+                            })
+                              //handle determinate return statements
                               match_meth.rete match {
-
+                                //return x
+                                case v @ Var(name) =>
+                                  val leftTopNode = Graph.getNode(meth, x)
+                                  val rightTopNode = Graph.getNode(match_meth, v)
+                                  rightTopNode.subsetof += leftTopNode
+                                // return null
+                                case Nulls() =>
+                                  val leftTopNode = Graph.getNode(meth, x);
+                                  leftTopNode.ptsto += Null
+                                // return x.e
+                                case Access(e, x)  =>
+                                  e match {
+                                    case v @ Var(field_name) =>
+                                      val leftTopNode = Graph.getNode(meth, x)
+                                      val rightTopNode = Graph.getNode(match_meth, v)
+                                      rightTopNode.subsetof += leftTopNode
+                                    case Nulls() => val leftTopNode = Graph.getNode(meth, x);
+                                                  leftTopNode.ptsto += Null
+                                    case _ => sys.error("malformed program")
+                                  }
                               }
-
-
-
                           }
-                          case _ => ; // return type is not a class
                         }
                         case None => sys.error("malformed program") //method doesn't exist
                       }
                     }
                     case Null => ; //continue on if we have a null in the ptsto set
                   }
+
                 }
               case _ => ;
             }
@@ -348,6 +393,57 @@ object Andersen {
   //
   def solveGraph() {
     // ...
+    var workList: Set[Node] = Graph.varToNode.values.toSet
+
+    while (workList.nonEmpty) {
+      val n = workList.head
+      workList = workList.tail
+
+      n match {
+        //head is a top node
+        case n@TopNode(ptsto, subsetof, cons) => {
+          n.subsetof.foreach((dst: Node) => {
+            dst match {
+              case t@TopNode(ptsto, subsetof, cons) => {
+                var priorT = t
+                t.ptsto ++= n.ptsto
+                if (!(t.ptsto equals priorT.ptsto)) {
+                  workList += t
+                }
+              }
+              case o@ObjNode(ptsto, subsetof, cn, site, fields) => {
+                var priorO = o;
+                o.ptsto ++= n.ptsto;
+                if (!(o.ptsto equals priorO.ptsto)) {
+                  workList += o
+                }
+              }
+            }
+          }) //for each
+        }
+        //head is a an obj node
+        case n@ObjNode(ptsto, subsetof, cn, site, fields) => {
+          n.subsetof.foreach((dst: Node) => {
+            dst match {
+              case t@TopNode(ptsto, subsetof, cons) => {
+                var priorT = t
+                t.ptsto ++ n.ptsto
+                if (t.ptsto != priorT.ptsto) {
+                  workList += t
+                }
+              }
+              case o@ObjNode(ptsto, subsetof, cn, site, fields) => {
+                var priorO = o;
+                o.ptsto ++ n.ptsto;
+                if (o.ptsto != priorO.ptsto) {
+                  workList += o
+                }
+              }
+            }
+          })
+        }
+      }
+    } //worklist loop
   }
 
   // this is called from solveGraph() to detect and merge cycles in
@@ -389,10 +485,10 @@ object Andersen {
 sealed abstract class Constraint
 
 // field access on the left: src.fld ⊆ dst
-case class LhsCon( src:TopNode, fld:Var, dst:TopNode ) extends Constraint
+case class RhsCon( src:TopNode, fld:Var, dst:TopNode ) extends Constraint
 
 // field access on the right: src ⊆ dst.fld
-case class RhsCon( src:TopNode, dst:TopNode, fld:Var ) extends Constraint
+case class LhsCon( src:TopNode, dst:TopNode, fld:Var ) extends Constraint
 
 // indeterminate method call: rhs := lhs.method(args)
 case class CallCon( rhs:TopNode, lhs:TopNode, mn:MethodName, args:Seq[TopNode] ) extends Constraint
@@ -418,7 +514,7 @@ case class TopNode(
 
 // ref nodes are for things that can belong to points-to sets. this
 // includes objects and Null.
-sealed abstract class RefNode( val id:Int )
+sealed abstract class RefNode( val id:Int ) extends Node
 
 // nodes for abstract objects
 case class ObjNode(

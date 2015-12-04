@@ -11,7 +11,7 @@ class Main {
     ##b.b_a := a2;##
     b.b_c := c2;
     c := b.b_c;
-    c3 := a.foo();
+    c3 := a.foo(4, b, "string");
   }
 }
 
@@ -22,7 +22,7 @@ class A {
 
   }
 
-  def foo(fooc: C) : C = {
+  def foo(number: int, b: B, str: string, fooc: C) : C = {
     fooc := new C();
     return fooc;
   }

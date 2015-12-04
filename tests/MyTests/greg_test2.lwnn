@@ -1,0 +1,52 @@
+// greg_test2.lwnn
+//
+// Test that the worklist can process multiple levels of propagation
+
+// Demos one level of points-to set propagation to subsetOf set members.
+// **Test the subsetOf member going back on the worklist and propagating further to its subsetOf set.
+// **Output below confirms multiple levels of propagation are occurring with a functioning worklist.
+
+class MyFirstLwnnClass {
+
+	def FirstClassMethod(ptr1:SecondClass, ptr2:SecondClass, ptr3:SecondClass, ptr3:SecondClass, ptr4:SecondClass, ptr5:SecondClass) = {
+
+		ptr1 := new SecondClass();		// ptr1 points to this node id
+		ptr2 := new SecondClass();		// ptr2 points to this node id
+		ptr3 := new SecondClass();		// ptr3 points to this node id
+
+		// ptr1 should be a subset of all three of these
+		ptr2 := ptr1;	// ptr1.subsetOf { ptr2 }; 					ptr2 inherits ptr1's points-to set
+		ptr3 := ptr1;	// ptr1.subsetOf { ptr2, ptr3 }; 			ptr2 and ptr3 inherit ptr and ptr3's points-to sets
+		ptr4 := ptr1;	// ptr1.subsetOf { ptr2, ptr3, ptr4 }		ultimately ptr4 should contain ptrs 2, 3, and 4's points-to sets
+
+		ptr3 := new SecondClass(); 		// ptr3 should have two IDs in its points-to set
+
+		ptr5 := ptr3;					// ptr3 is subset of ptr5; ptr5's points-to should ultimately contain all of ptr3's pts-to members
+
+	}
+}
+
+class SecondClass {
+
+	// fields field1:ThirdClass, field2:ThirdClass, field3:ThirdClass;
+
+}
+
+/*
+
+output looks like this before and after solveGraph()
+
+	FirstClassMethod_ptr1 → 15
+	FirstClassMethod_ptr2 → 17
+	FirstClassMethod_ptr3 → 19, 30
+	FirstClassMethod_ptr4 →
+	FirstClassMethod_ptr5 →
+	***** after solvegraph() *******
+	FirstClassMethod_ptr1 → 15
+	FirstClassMethod_ptr2 → 15, 17
+	FirstClassMethod_ptr3 → 15, 19, 30
+	FirstClassMethod_ptr4 → 15
+	FirstClassMethod_ptr5 → 15, 19, 30
+
+
+*/
