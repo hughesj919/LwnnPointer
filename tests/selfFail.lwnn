@@ -1,5 +1,0 @@
-class A {
-  def Main(self: A) = {
-    self := new A();
-  }
-}

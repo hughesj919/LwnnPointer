@@ -1,1 +1,0 @@
-class A { fields x: A; def Main() = { self.x := null; } }
